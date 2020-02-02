@@ -54,10 +54,15 @@ def deleteConnections(connections):
         deleteConnection(connection)
         
 def importNewProfiles(searchPath):
-    vpnUsername = input("Enter your vpn username: ")
-    vpnPassword = getpass.getpass("Enter your vpn password: ")
     connectionFiles = [f for f in os.listdir(searchPath) if os.path.isfile(os.path.join(searchPath, f)) and f.endswith('.ovpn')]
 
+    if len(connectionFiles) == 0:
+        print("No files found to import")
+        return
+    
+    vpnUsername = input("Enter your vpn username: ")
+    vpnPassword = getpass.getpass("Enter your vpn password: ")
+    
     for connectionFile in connectionFiles: 
         print(connectionFile)
         connection = connectionFile[:-5]
