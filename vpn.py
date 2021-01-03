@@ -157,21 +157,26 @@ def benchmarkConnection(connection):
     return time
 
 
-def downloadFile(url):
+def downloadFile(path, url):
     print('Downloading file: ' + url)
-    r = requests.get(url)
     parsed = urlparse(url)
     fileName = os.path.basename(parsed.path)
-    with open(fileName, 'wb') as f:
+    
+    targetFile = path + fileName
+    if os.path.exists(targetFile):
+        print('File ' + fileName + ' already exists')
+        return
+    r = requests.get(url)
+    with open(targetFile, 'wb') as f:
         f.write(r.content)
-    print('Finished download: ' + url)
+    print('Finished download: ' + fileName)
 
-def downloadFromPage(pageUrl):
+def downloadFromPage(path, pageUrl):
     page = requests.get(pageUrl)
     urls = re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', page.text)
     for url in urls:
         if url.endswith('.ovpn') and 'udp' in url:
-            downloadFile(url)
+            downloadFile(path, url)
 
 
 def clear_cmd(args):
@@ -181,10 +186,10 @@ def benchmark_cmd(args):
     benchmarkConnections("nordvpn")
 
 def dl_all_cmd(args):
-    downloadFromPage(ALL_PAGE)
+    downloadFromPage(PATH, ALL_PAGE)
 
 def dl_restricted_cmd(args):
-    downloadFromPage(RESTRICTED_PAGE)
+    downloadFromPage(PATH, RESTRICTED_PAGE)
     
 def import_cmd(args):
     importNewProfiles(PATH)
