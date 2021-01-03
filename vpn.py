@@ -1,13 +1,16 @@
 #!/bin/python3
-
-import os
-import subprocess
 import argparse
 import getpass
+import os
+import re
+import requests
+import subprocess
+from urllib.parse import urlparse
 
-__version__ = '1.0.0'
+__version__ = '1.1.0'
 PATH = './'
-
+RESTRICTED_PAGE = 'https://support.nordvpn.com/Restricted-countries/1391702632/Connecting-from-countries-with-internet-restrictions-on-Windows.htm'
+ALL_PAGE = 'https://nordvpn.com/ovpn/'
 
 def runProcess(command):
     # Invoke the command and pass its output streams to the completedProc object
@@ -97,7 +100,7 @@ def downloadBenchmarkFile():
             for chunk in r.iter_content(chunk_size=81920): 
                 if chunk: # filter out keep-alive new chunks
                     #f.write(chunk)
-                    print(len(chunk))
+                    #print(len(chunk))
                     # if time takes more than a minute we cancel
                     current = time.time()
                     if current - start > timeout:
@@ -153,11 +156,35 @@ def benchmarkConnection(connection):
     disconnectConnection(connection)
     return time
 
+
+def downloadFile(url):
+    print('Downloading file: ' + url)
+    r = requests.get(url)
+    parsed = urlparse(url)
+    fileName = os.path.basename(parsed.path)
+    with open(fileName, 'wb') as f:
+        f.write(r.content)
+    print('Finished download: ' + url)
+
+def downloadFromPage(pageUrl):
+    page = requests.get(pageUrl)
+    urls = re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', page.text)
+    for url in urls:
+        if url.endswith('.ovpn') and 'udp' in url:
+            downloadFile(url)
+
+
 def clear_cmd(args):
     deleteConnections(getConnections("nordvpn.com"))
 
 def benchmark_cmd(args):
     benchmarkConnections("nordvpn")
+
+def dl_all_cmd(args):
+    downloadFromPage(ALL_PAGE)
+
+def dl_restricted_cmd(args):
+    downloadFromPage(RESTRICTED_PAGE)
     
 def import_cmd(args):
     importNewProfiles(PATH)
@@ -179,6 +206,14 @@ if __name__ == '__main__':
     # benchmark existing vpns
     benchmark_parser = subparsers.add_parser('benchmark')
     benchmark_parser.set_defaults(dispatch=benchmark_cmd)
+    
+        # clear vpns
+    clear_parser = subparsers.add_parser('downloadrestricted')
+    clear_parser.set_defaults(dispatch=dl_restricted_cmd)
+    
+    # add new vpns from the local path
+    import_parser = subparsers.add_parser('downloadall')
+    import_parser.set_defaults(dispatch=dl_all_cmd)
     
     args = parser.parse_args()
     if 'dispatch' in args:
